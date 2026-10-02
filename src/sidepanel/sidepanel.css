@@ -1,0 +1,853 @@
+/* FluidExtension side panel — the Fluid design system (Liquid Glass).
+ *
+ * Rebuilt 2026-09-14 on the system in
+ * fluidghost/checkout/design/liquid-glass/ (branch `design/liquid-glass`),
+ * which is the source of truth for how every Fluid product looks. Tokens,
+ * type scale, spacing scale and radii are that system's, not approximations.
+ *
+ * ── THE ONE RULE ──────────────────────────────────────────────────────────
+ * GLASS IS CHROME. CONTENT IS OPAQUE.
+ * The bar, the tab rail and the run bar float above the column and are glass.
+ * Every budget, transcript, draft, field and log row sits on an opaque card.
+ * That is not taste here: this panel's whole job is numbers you act on, and a
+ * figure you re-read because the surface behind it is moving is a figure that
+ * cost you time.
+ *
+ * ── WHY THE CHROME FLOATS ─────────────────────────────────────────────────
+ * A side panel is ~380px and the user cannot make it narrower. A docked bar
+ * would take a slice out of the only dimension there is. Floating it costs
+ * nothing AND gives the lens something to bend, because the conversation
+ * scrolls underneath it — a lens over a flat fill is just a bordered box.
+ *
+ * ── STILL DARK ONLY, AND STILL DELIBERATELY ───────────────────────────────
+ * The previous stylesheet said so and the reason has not changed: FluidTalk's
+ * own stylesheet is a dark-only product and documents a light default breaking
+ * its body-anchored elements. The Fluid system ships light grounds for
+ * marketing surfaces; this panel belongs to FluidTalk and stays dark.
+ *
+ * ── THE ACCENT IS FLUIDTALK EMERALD ───────────────────────────────────────
+ * The system's STRUCTURE is the Fluid one — tokens, scales, type, the material
+ * and where it is allowed. The HUE is FluidTalk's, taken from the Talk-Drop in
+ * icons/icon.svg (#34d399 -> #10b981) so the brand fill and the mark above it
+ * are the same green rather than two that nearly match.
+ *
+ * That has one consequence worth stating, because it is the opposite of what
+ * the design system says to do: there is NO separate semantic green here. The
+ * system keeps semantics off the accent so a state cannot read as decoration,
+ * which works while the accent is violet; against an emerald accent a distinct
+ * "ok" green would sit one shade away and mean something different at 11px.
+ * Green therefore carries exactly one meaning in this panel — ours, on, live,
+ * succeeded — and amber and rose carry the rest. See --okc below.
+ */
+
+@font-face{font-family:'Geist';font-style:normal;font-weight:100 900;font-display:swap;
+  src:url(../vendor/geist-latin.woff2) format('woff2')}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:100 900;font-display:swap;
+  src:url(../vendor/geist-mono-latin.woff2) format('woff2')}
+
+:root {
+  /* ── ground. The Fluid system warms its neutrals toward violet, and they
+        stay that way under a green accent on purpose: a cool near-black is what
+        keeps emerald reading as a colour rather than as the page. ────────── */
+  --black:#07060b;
+  --deep:#0c0a12;
+  --panel-s:#121019;          /* an opaque content surface */
+
+  /* ── ink ──────────────────────────────────────────────────────────────────
+     ⚠ --ink3 IS LIFTED FROM THE SYSTEM'S #6f697f, and deliberately.
+     Measured on this panel's own grounds, the system value gives 3.59:1 on a
+     card and 3.85:1 on the page — under the 4.5:1 the system itself calls
+     non-negotiable. It is fine on a marketing page, where tertiary ink is a
+     caption under a 20px lede; here it is EVERY hint, every `small` and every
+     budget sub-label, at 10-10.5px, which is exactly where it matters most.
+     #8b83a0 keeps the same violet-warm hue and only raises lightness: 5.25:1
+     on a card, 5.63:1 on the page. Same relationship to --ink2, legible. */
+  --ink:#f6f4fa; --ink2:#a9a3b8; --ink3:#8b83a0; --ink-inv:#0b0912;
+
+  /* ── brand — FLUIDTALK EMERALD, the mark's own colour ─────────────────── */
+  --acc:#6ee7b7;                                   /* accent ON DARK */
+  /* The gradient is lifted straight off the Talk-Drop in icons/icon.svg
+     (#34d399 -> #10b981), so the one brand fill in the panel and the mark
+     above it are the same green rather than two greens that nearly match. */
+  --brand:linear-gradient(135deg,#34d399,#10b981);
+  /* ⚠ DARK INK ON THE MINT FILL, not white. Measured, not eyeballed: white on
+     #10b981 is 2.54:1 — it looks fine in a mock and fails the moment anyone
+     runs a checker. #04231a gives 6.57:1 on the darker stop and 8.67:1 on the
+     lighter, and it is what a mint button actually wants. */
+  --brand-ink:#04231a;
+  --brand-glow:16,185,129;
+
+  /* ── semantic ─────────────────────────────────────────────────────────────
+     ⚠ THERE IS DELIBERATELY NO SEPARATE "OK" GREEN, and this is the whole
+     reason the accent swap needed thought rather than a find-and-replace.
+     The design system keeps semantics off the accent hue so a state cannot be
+     mistaken for a brand flourish — which works while the accent is violet.
+     With the accent moved to emerald, a distinct semantic green would sit one
+     shade away from it: two greens, indistinguishable at 11px, meaning two
+     different things. The panel's ORIGINAL stylesheet had already reasoned
+     this out and said so — "emerald means ours/succeeded, so it must not also
+     mean healthy or a green bubble becomes two signals."
+     So green carries ONE meaning here: ours, on, live, succeeded. Amber and
+     rose carry everything else, and they stay well clear of it. */
+  --okc:var(--acc); --warnc:#fbbf24; --badc:#ff7285;
+
+  --hair:rgba(255,255,255,.10);
+  --hair2:rgba(255,255,255,.055);
+  --card:var(--panel-s);
+  --field:rgba(255,255,255,.05);
+
+  --body:'Geist',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,Consolas,monospace;
+
+  /* ── the one spacing scale, and the one radius scale ──────────────────── */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r-xs:10px; --r-sm:14px; --r-md:22px; --r-lg:30px; --r-pill:980px;
+
+  /* How far the floating chrome reaches, so the scroll padding is derived
+     from it rather than guessed twice. */
+  --chrome-top:104px;
+  --chrome-bottom:72px;
+}
+
+* { box-sizing: border-box; }
+
+/* ⚠ `hidden` LOSES TO ANY `display` RULE, and silently.
+ *
+ * The UA sheet says `[hidden] { display: none }` at the lowest specificity, so
+ * any class here that sets `display` — and most layout classes do — overrides
+ * it. The element stays on screen with `el.hidden === true`, which means code
+ * asserting the PROPERTY reports it hidden while the user is looking at it.
+ * Caught exactly that way: the fleet-config box sat on the Presets tab of an
+ * install that has no fleet file, and the test that checked `.hidden` passed. */
+[hidden] { display: none !important; }
+
+body {
+  margin:0; height:100vh; position:relative; overflow:hidden;
+  background:var(--black);
+  color:var(--ink);
+  font:13px/1.5 var(--body);
+  letter-spacing:-.006em;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── the floating chrome ──────────────────────────────────────────────────
+   Absolutely positioned rather than in flow, so the panels scroll UNDER it.
+   ⚠ Nothing on the path to a [data-lg] host may set `isolation`,
+   `will-change`, `transform` or `mix-blend-mode`: each makes a backdrop root,
+   and a descendant's backdrop-filter then samples only what was painted inside
+   it — which Chromium half-renders as a BAND that filters while the rest of
+   the element passes straight through. */
+.bar, .tabs {
+  position:absolute; left:8px; right:8px; z-index:4;
+  border-radius:18px;
+}
+.bar { top:8px; display:flex; align-items:center; gap:var(--s2); padding:9px 10px; }
+.tabs { top:56px; display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:4px;
+  border-radius:16px; }
+
+.lockup { display:flex; align-items:center; gap:7px; margin-right:auto; min-width:0; }
+/* THE FLUIDTALK TALK-DROP, untouched — and now the source of the whole
+   palette: --brand is its own gradient, so the mark and the one brand fill in
+   the panel are the same green. */
+.mark { display:block; flex:0 0 auto; }
+.wordmark { margin:0; font:650 13.5px/1 var(--body); letter-spacing:-.022em; color:var(--ink);
+  white-space:nowrap; }
+.wordmark b { font-weight:650; }
+.wordmark span { color:var(--ink3); font-weight:450; }
+
+/* A pill is a READOUT, never a control — so it gets a fill, never a second
+   slab. Never glass on glass. */
+.pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3.5px 9px; border-radius:var(--r-pill);
+  font:550 11px/1 var(--body); letter-spacing:-.01em;
+  background:var(--field); color:var(--ink2); border:1px solid var(--hair2);
+  white-space:nowrap;
+}
+.dot { width:6px; height:6px; border-radius:50%; background:var(--ink3); flex:0 0 auto; }
+#platform-pill[data-state="none"] { color:var(--ink3); }
+#platform-pill:not([data-state="none"]) { color:var(--acc);
+  border-color:color-mix(in srgb,var(--acc) 34%,transparent); }
+.pill[data-state="running"] { color:var(--okc);
+  border-color:color-mix(in srgb,var(--okc) 32%,transparent); }
+.pill[data-state="running"] .dot { background:var(--okc);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--okc) 18%,transparent); }
+.pill[data-state="stopping"] { color:var(--warnc);
+  border-color:color-mix(in srgb,var(--warnc) 32%,transparent); }
+.pill[data-state="stopping"] .dot { background:var(--warnc); }
+/* ASLEEP IS NOT IDLE, and it must not borrow the colour of either thing it
+   sits between. Green already means ours/on/live in this panel and amber means
+   stopping, so a third FILL would read as a third kind of running; a hollow
+   ring reads as armed-and-not-acting at 11px, which is exactly what it is. */
+.pill[data-state="scheduled"] { color:var(--ink2); border-color:var(--hair); }
+.pill[data-state="scheduled"] .dot { background:none;
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--acc) 70%,transparent); }
+
+/* ── tab rail ─────────────────────────────────────────────────────────────
+   The rail is glass; the SELECTION is a fill on top of it, not a second slab.
+   That is the "never glass on glass" rule, and it is also why there is no
+   sliding indicator here: the merging trick that makes a selection stretch the
+   glass needs the indicator to be a [data-lg-shape] whose silhouette is
+   remapped whenever it moves, and the panel's tab state is toggled by
+   `sidepanel.js` as a class — there is no move to hook. A fill costs nothing
+   and cannot fall out of sync with the class that actually decides. */
+.tab {
+  position:relative; z-index:1; appearance:none; border:0; background:none;
+  font:550 11.5px/1 var(--body); letter-spacing:-.012em; color:var(--ink3);
+  padding:7px 0; border-radius:var(--r-xs); cursor:pointer;
+}
+.tab:hover { color:var(--ink2); }
+/* ⚠ THE ACTIVE TAB KEEPS ITS OWN BACKGROUND, and that is the whole safety net.
+   The travelling indicator below is an ENHANCEMENT layered on top; it is placed
+   by JS, and JS that measures a box cannot run in a page that has never been
+   laid out. A docked side panel starts HIDDEN — `requestAnimationFrame` does
+   not fire there — so for one build this rule was deleted in favour of the
+   indicator and the result was a tab rail with no selection marked at all.
+   Never let the only highlight depend on a measurement. */
+.tab.is-active { color:var(--ink); background:color-mix(in srgb,var(--ink) 13%,transparent); }
+/* Once the indicator is really placed it takes over, and the flat background
+   steps aside so the two do not stack into a double-bright pill. */
+.tabs.dot-ready .tab.is-active { background:transparent; }
+.tab:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+
+/* THE TRAVELLING SELECTION.
+   `left`/`width` are set once from JS and never animated — animating either
+   relayouts the rail on every frame. The movement is a transform, which the
+   compositor owns, so a spring costs nothing.
+   The curve is Apple's: a slight overshoot on the way in, none on the way out.
+   `scaleX` is set alongside translate so a wide tab does not squash a narrow
+   one — see `moveTabDot`. */
+.tabdot {
+  position:absolute; z-index:0; top:4px; bottom:4px; left:0; width:0;
+  border-radius:var(--r-xs);
+  background:color-mix(in srgb,var(--ink) 13%,transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb,#fff 16%,transparent),
+    0 1px 3px color-mix(in srgb,#000 22%,transparent);
+  transform-origin:left center;
+  pointer-events:none;
+  opacity:0;
+}
+/* Shown only once JS has actually measured a box. Until then the flat
+   background above is doing the job, so nothing is ever unmarked. */
+.tabs.dot-ready .tabdot { opacity:1; }
+/* ⚠ THE TRANSITION IS ON THE READY CLASS, NOT ON .tabdot.
+   The first placement sets `transform` from `none`, and a transition already
+   armed would animate that — the indicator would slide in from the left edge
+   on every single panel open. Ready is added one frame AFTER the first
+   placement, so the opening move is instant and every later one springs. */
+.tabs.dot-ready .tabdot { transition:transform .42s cubic-bezier(.32,1.28,.38,1); }
+@media (prefers-reduced-motion:reduce){ .tabs.dot-ready .tabdot { transition:none; } }
+
+/* ── the scrolling work ───────────────────────────────────────────────── */
+.panel {
+  display:none;
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+  padding:var(--chrome-top) var(--s3) var(--s5);
+  scrollbar-width:thin; scrollbar-color:var(--hair) transparent;
+}
+.panel.is-active { display:flex; flex-direction:column; gap:var(--s3); }
+.panel::-webkit-scrollbar { width:8px; }
+.panel[data-panel="inbox"].is-active { padding-bottom:var(--chrome-bottom); }
+
+/* ── budgets. THE NUMBERS ARE WHY THIS IS OPAQUE. ─────────────────────── */
+/* FLEX, NOT A THREE-COLUMN GRID. A platform that has no outreach and no
+   requests pass hides those two budgets outright — Telegram hides both — and a
+   fixed grid left the one survivor stranded at a third of the width with two
+   empty columns beside it, which reads as a layout that failed rather than as
+   the only budget this platform has. */
+/* WRAPS, because the number of budgets is not fixed: it is however many passes
+   this platform can run and has switched on, which is one on WhatsApp and five
+   on Instagram. Five across a 400px panel gave each cell ~70px, which truncates
+   "+1 in 42m · 12 today" to nothing useful — so they flow onto a second row
+   instead of being squeezed. `auto-fit` collapses the empty tracks, so two
+   budgets still fill the width rather than huddling on the left. */
+.budgets { display:grid; gap:var(--s2); grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); }
+.budget { background:var(--card); border:1px solid var(--hair2); border-radius:var(--r-sm);
+  padding:10px 10px 9px; min-width:0; }
+.budget .n { font:650 21px/1 var(--body); letter-spacing:-.03em; color:var(--ink);
+  font-variant-numeric:tabular-nums; }
+.budget .n[data-level="low"] { color:var(--warnc); }
+.budget .n[data-level="spent"] { color:var(--badc); }
+.budget .k { margin-top:3px; font:550 10.5px/1 var(--body); color:var(--ink3); }
+.budget .sub { margin-top:6px; font:450 10px/1.25 var(--body); color:var(--ink3); }
+.budget .sub .in { color:var(--ink2); }
+.budget .sub .in[data-soon="true"] { color:var(--warnc); }
+.meter { margin-top:8px; height:3px; border-radius:99px; background:var(--field); overflow:hidden; }
+.meter i { display:block; height:100%; border-radius:99px; background:var(--acc); }
+.meter i[data-level="low"] { background:var(--warnc); }
+.meter i[data-level="spent"] { background:var(--badc); }
+
+/* ── cards ────────────────────────────────────────────────────────────── */
+.card { background:var(--card); border:1px solid var(--hair2); border-radius:var(--r-md);
+  padding:var(--s3); min-width:0; }
+.card-head { display:flex; align-items:center; justify-content:space-between; gap:var(--s2);
+  margin-bottom:10px; }
+.who { font:600 12.5px/1.2 var(--body); letter-spacing:-.015em; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; }
+
+/* ── update banner ───────────────────────────────────────────────────────
+   Sits above the budgets because it is the only thing on this tab that is not
+   about the current run, and it is `hidden` unless a newer release exists.
+   Amber, not green: the account is fine, something is merely out of date —
+   green would read as "working" and get scanned past, red as "broken". */
+.update {
+  display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2);
+  padding:10px 11px; border-radius:var(--r-sm);
+  background:color-mix(in srgb,var(--warnc) 11%,transparent);
+  border:1px solid color-mix(in srgb,var(--warnc) 28%,transparent);
+}
+.update[hidden] { display:none; }
+.update-said { flex:1 1 150px; min-width:0; display:grid; gap:2px; }
+.update-said strong { font:650 12.5px/1.2 var(--body); letter-spacing:-.015em; color:var(--warnc); }
+.update-said span { font:450 10.5px/1.35 var(--body); color:var(--ink3); }
+/* The actions do NOT stretch: `.btn` is flex:1 for the three-up rows further
+   down the panel, and inherited here it made Download fill the banner. */
+.update-acts { display:flex; gap:6px; flex:0 0 auto; }
+.update-acts .btn { flex:0 0 auto; }
+.btn.sm { padding:6px 10px; font-size:11.5px; }
+.btn.ghost { background:none; border-color:transparent; color:var(--ink3); }
+.btn.ghost:hover:not(:disabled) { color:var(--ink2); background:var(--field); }
+
+.status { font:450 11.5px/1.45 var(--body); color:var(--ink3); }
+.status[data-tone="ok"] { color:var(--okc); }
+.status[data-tone="warn"] { color:var(--warnc); }
+.status[data-tone="error"] { color:var(--badc); }
+
+/* ── transcript. Ours and theirs differ by FILL, not by glass: a message is
+      content. ─────────────────────────────────────────────────────────── */
+.transcript { list-style:none; margin:0; padding:0; display:flex; flex-direction:column;
+  gap:7px; max-height:280px; overflow-y:auto; scrollbar-width:thin;
+  scrollbar-color:var(--hair) transparent; }
+.transcript::-webkit-scrollbar { width:6px; }
+.msg { max-width:86%; padding:8px 11px; border-radius:16px;
+  font:450 12.5px/1.45 var(--body); color:var(--ink); word-wrap:break-word; }
+.msg.in { align-self:flex-start; background:var(--field); border-bottom-left-radius:6px; }
+.msg.out { align-self:flex-end; background:color-mix(in srgb,var(--acc) 17%,transparent);
+  border:1px solid color-mix(in srgb,var(--acc) 26%,transparent); border-bottom-right-radius:6px; }
+
+.bubbles { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.bubbles li { position:relative; padding:8px 11px; border-radius:14px; background:var(--field);
+  font:450 12.5px/1.45 var(--body); color:var(--ink); cursor:pointer;
+  border:1px solid transparent; }
+.bubbles li:hover { border-color:var(--hair); }
+.bubbles li:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.bubbles li.is-next { border-color:color-mix(in srgb,var(--acc) 40%,transparent); }
+.bubbles li.is-used { opacity:.45; }
+.bmeta { display:block; margin-top:4px; font:500 9.5px/1 var(--mono); color:var(--ink3); }
+
+/* ── controls ─────────────────────────────────────────────────────────── */
+.actions { display:flex; gap:var(--s2); }
+.btn {
+  flex:1; appearance:none; cursor:pointer; min-width:0;
+  padding:9px 10px; border-radius:var(--r-sm);
+  font:550 12px/1 var(--body); letter-spacing:-.012em;
+  background:var(--field); color:var(--ink); border:1px solid var(--hair2);
+}
+/* A link wearing the button. `.btn` was written for <button>, which centres
+   its own label and has no underline; an <a> does neither, and its box is
+   inline so `flex:1` alone would leave three links of three different widths
+   with the text hugging the left edge. */
+a.btn {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  text-align:center; text-decoration:none;
+}
+/* The official marks, inlined. `currentColor` is the whole trick: the glyph
+   takes the button's own ink, so it stays legible in any tone and cannot end
+   up as a brand colour fighting the panel. `flex:0 0 auto` because a logo is
+   not a thing to squash when the label beside it wraps. */
+a.btn .ico { width:13px; height:13px; flex:0 0 auto; fill:currentColor; }
+
+/* THE FOOT OF EVERY TAB, not a bar across the bottom. `margin-top:auto` is
+   what pins it: the panels are flex columns, so this pushes the block to the
+   end even on a tab whose content does not fill the height — without it,
+   Activity with three log lines would show the links floating under them
+   halfway up the panel. */
+.community { margin-top:auto; padding-top:var(--s4); }
+.community > span { color:var(--ink3); }
+.btn:hover:not(:disabled) { background:color-mix(in srgb,var(--ink) 11%,transparent); }
+.btn:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.btn:disabled { color:var(--ink3); cursor:not-allowed; opacity:.55; }
+/* ONE primary action per view. Colouring every CTA is the fastest way to look
+   like a theme instead of a system. */
+.btn.primary { background:var(--brand); border-color:transparent; color:var(--brand-ink);
+  box-shadow:0 6px 18px rgba(var(--brand-glow),.34); }
+.btn.primary:hover:not(:disabled) { filter:brightness(1.08); }
+.btn.danger { background:color-mix(in srgb,var(--badc) 16%,transparent); color:var(--badc);
+  border-color:color-mix(in srgb,var(--badc) 32%,transparent); }
+.btn.danger:hover:not(:disabled) { background:color-mix(in srgb,var(--badc) 24%,transparent); }
+
+.link { appearance:none; border:0; background:none; padding:0; cursor:pointer;
+  font:550 11.5px/1 var(--body); color:var(--acc); }
+.link:hover { text-decoration:underline; }
+.link:focus-visible { outline:2px solid var(--acc); outline-offset:2px; border-radius:4px; }
+
+.hint { margin:0; font:450 10.5px/1.45 var(--body); color:var(--ink3); }
+.rule { border:0; border-top:1px solid var(--hair2); margin:var(--s2) 0; }
+
+/* ── the run bar. Floats at the foot of the Inbox for the same reason the
+      top chrome floats: it is chrome, and the column keeps its width. ──── */
+.runbar {
+  position:absolute; left:8px; right:8px; bottom:8px; z-index:4;
+  border-radius:20px; padding:10px;
+  display:flex; align-items:center; gap:var(--s3);
+}
+.runbar .actions { flex:0 0 auto; }
+.runbar .btn { flex:0 0 auto; padding-inline:18px; }
+/* TWO LINES, NOT AN ELLIPSIS. This line says what Start will actually do —
+   "Sends replies where their message is the last one…" — and a single nowrap
+   line cut it off exactly where the meaning is. Clamped at two so the bar
+   cannot grow without bound on a long status. */
+.runbar .hint { flex:1; min-width:0; overflow:hidden; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.35; }
+
+/* ── switches ─────────────────────────────────────────────────────────── */
+.check { display:flex; align-items:flex-start; gap:var(--s3); background:var(--card);
+  border:1px solid var(--hair2); border-radius:var(--r-sm); padding:11px var(--s3);
+  cursor:pointer; }
+.check > span:first-child { flex:1; min-width:0; }
+.check .lab { display:block; font:550 12.5px/1.25 var(--body); color:var(--ink);
+  letter-spacing:-.012em; }
+.check .sub { display:block; margin-top:4px; font:450 10.5px/1.4 var(--body); color:var(--ink3); }
+/* Says "this one can cost you the account", next to the switch that does it.
+   Amber rather than red: red is for a cap already spent, which is a thing that
+   has happened — this is a thing that might. */
+.risk { display:inline-block; margin-left:6px; padding:1.5px 6px; border-radius:var(--r-pill);
+  font:650 9px/1.35 var(--body); letter-spacing:.04em; text-transform:uppercase;
+  color:var(--warnc); background:color-mix(in srgb,var(--warnc) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--warnc) 30%,transparent); vertical-align:1px; }
+.risk[hidden] { display:none; }
+.check input[type="checkbox"] {
+  appearance:none; margin:0; flex:0 0 auto; width:38px; height:22px; border-radius:99px;
+  background:var(--field); border:1px solid var(--hair); position:relative; cursor:pointer;
+}
+.check input[type="checkbox"]::after {
+  content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:var(--ink3); transition:transform .18s cubic-bezier(.32,.72,0,1), background .18s;
+}
+.check input[type="checkbox"]:checked { background:color-mix(in srgb,var(--acc) 42%,transparent);
+  border-color:transparent; }
+.check input[type="checkbox"]:checked::after { transform:translateX(16px); background:#fff; }
+.check input[type="checkbox"]:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+@media (prefers-reduced-motion:reduce){ .check input[type="checkbox"]::after { transition:none; } }
+
+/* ── fields ───────────────────────────────────────────────────────────── */
+.field { display:block; min-width:0; }
+.field > span { display:block; font:550 11.5px/1 var(--body); color:var(--ink2); margin-bottom:6px; }
+
+/* A label row with something on the right.
+   ⚠ `.field > span.with-action` rather than `.with-action`: the rule above is
+   (0,1,1) and a lone class is (0,1,0), so a plain `.with-action { display:flex }`
+   loses to it and the row stays a block with the link wrapping underneath. */
+.field > span.with-action { display:flex; align-items:center; }
+.field > span.with-action > label { font:inherit; color:inherit; cursor:pointer; }
+/* Pushed to the far edge, so the label and its ⓘ stay together on the left. */
+.field > span.with-action .link { margin-left:auto; }
+/* `.link` was written for <button>, which has no underline of its own. An
+   anchor does, and it would sit under the label row looking like a typo. */
+a.link { text-decoration:none; }
+/* The one mark that says "this leaves the panel". Small, and after the text so
+   it reads as punctuation rather than an icon. */
+a.link.out::after { content:"↗"; margin-left:3px; font-size:.92em; }
+.field.row { display:flex; gap:var(--s2); align-items:flex-end; }
+.field .grow { flex:1; min-width:0; }
+/* ⚠ AN INPUT IN A FLEX ROW NEEDS `min-width:0`, or its `width:100%` becomes a
+   floor rather than a target and pushes its sibling off the edge. That is
+   exactly what happened to Save beside the preset-name box: the button was
+   rendered, hit-testable and half outside the panel. `.grow` covers the
+   number-pair rows; this covers the input+button row, which has no `.grow`. */
+.field.row > input { flex:1 1 auto; min-width:0; }
+.field.row > .btn { flex:0 0 auto; }
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  width:100%; padding:9px 11px; border-radius:var(--r-sm);
+  background:var(--field); border:1px solid var(--hair2); color:var(--ink);
+  font:450 12.5px/1.35 var(--body); font-family:var(--body);
+}
+textarea { resize:vertical; }
+input::placeholder, textarea::placeholder { color:var(--ink3); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline:2px solid var(--acc); outline-offset:1px; border-color:transparent; }
+input:disabled { opacity:.5; cursor:not-allowed; }
+small { display:block; margin-top:6px; font:450 10.5px/1.4 var(--body); color:var(--ink3); }
+code { font:500 10.5px/1.4 var(--mono); color:var(--ink2); background:var(--field);
+  padding:1px 4px; border-radius:5px; }
+.detected { margin:0; display:flex; align-items:center; gap:var(--s2); }
+.detected .pill { font-size:10px; }
+
+.probe { margin:0; max-height:220px; overflow:auto; background:var(--card);
+  border:1px solid var(--hair2); border-radius:var(--r-sm); padding:10px;
+  font:500 10.5px/1.5 var(--mono); color:var(--ink2); white-space:pre-wrap;
+  word-break:break-word; }
+
+/* ── the schedule ─────────────────────────────────────────────────────────
+   OPAQUE, like every other control: it is a decision about when a real
+   account acts, not chrome. The card sits inside the platform form and holds
+   the week, the windows and one readout.
+
+   THE WEEK IS SEVEN CIRCLES and they are the only place a day is switched on
+   or off. At 380px a permanent seven-row grid is most of the panel, and most
+   of it says "off" — the circles say the same thing in one line and give the
+   rows something to mean: a row exists because its day is lit. */
+.sched { display:flex; flex-direction:column; gap:var(--s3); }
+
+.week { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+/* ⚠ CAPPED, because a side panel is resizable and `aspect-ratio:1` in a
+   seven-column grid has no upper bound: dragged out to tab width the circles
+   grew to 150px each and the week filled the screen. The panel is designed for
+   ~380px, so the circles are sized for that and simply stop growing. */
+.day {
+  appearance:none; cursor:pointer; padding:0; aspect-ratio:1; border-radius:50%;
+  width:100%; max-width:44px; justify-self:center;
+  background:var(--field); border:1px solid var(--hair2); color:var(--ink3);
+  font:600 11.5px/1 var(--body); letter-spacing:-.01em;
+  display:grid; place-items:center;
+  transition:background .16s, color .16s, border-color .16s;
+}
+.day[aria-pressed="true"] { background:color-mix(in srgb,var(--acc) 20%,transparent);
+  border-color:color-mix(in srgb,var(--acc) 45%,transparent); color:var(--acc); }
+.day:hover { border-color:var(--hair); }
+.day:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+@media (prefers-reduced-motion:reduce){ .day { transition:none; } }
+
+.windows { display:flex; flex-direction:column; gap:6px; }
+.windows .none { margin:0; font:450 10.5px/1.45 var(--body); color:var(--ink3); }
+/* WRAPS, so the overnight tag drops to a second line on a narrow panel rather
+   than squeezing the times it is describing. */
+.wrow { display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2); background:var(--field);
+  border:1px solid var(--hair2); border-radius:var(--r-xs); padding:7px 8px 7px 10px; }
+.wrow .d { flex:0 0 30px; font:600 11.5px/1 var(--body); color:var(--ink2); }
+/* A second window on the same day reads as "and", not as the day again. */
+.wrow .d.cont { color:var(--ink3); font-weight:450; }
+/* ⚠ WIDE ENOUGH FOR THE WHOLE TIME. At 66px Edge rendered "09:00" as `01::` —
+   clipped, not wrong, and it reads as a field that has lost its value. The
+   native picker button is what eats the room, and it is worth nothing here
+   where every value is typed or stepped, so it goes and the field keeps the
+   space. */
+.wrow input[type="time"] { width:74px; padding:4px 6px; border-radius:8px;
+  background:rgba(0,0,0,.28); border:1px solid var(--hair2); color:var(--ink);
+  font:500 11.5px/1.2 var(--mono); font-variant-numeric:tabular-nums; }
+.wrow input[type="time"]::-webkit-calendar-picker-indicator { display:none; }
+.wrow .sep { color:var(--ink3); font:450 11px/1 var(--body); }
+/* The tag and the button travel together — see `windowRow`. */
+.wrow .end { display:flex; align-items:center; gap:var(--s2); margin-left:auto; }
+/* An end before its start is not an error — it is Friday night. Saying which
+   day it lands on is what makes that read as deliberate rather than as a typo
+   nobody caught. */
+.nextday { font:500 9.5px/1 var(--mono); color:var(--warnc);
+  background:color-mix(in srgb,var(--warnc) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--warnc) 28%,transparent);
+  padding:3px 5px; border-radius:6px; white-space:nowrap; }
+.icon { appearance:none; background:none; border:0; cursor:pointer; color:var(--ink3);
+  width:20px; height:20px; border-radius:6px; display:grid; place-items:center;
+  font:450 14px/1 var(--body); flex:0 0 auto; }
+.icon:hover { color:var(--ink); background:var(--hair2); }
+.icon.rm:hover { color:var(--badc); }
+.icon:focus-visible { outline:2px solid var(--acc); outline-offset:1px; }
+
+.jrow { display:flex; align-items:center; gap:var(--s2);
+  font:550 11.5px/1 var(--body); color:var(--ink2); }
+.jrow input[type="number"] { width:64px; padding:7px 9px;
+  font:500 12px/1.2 var(--mono); font-variant-numeric:tabular-nums; }
+.jrow .unit { color:var(--ink3); font-weight:450; }
+
+/* The one number in the card you act on, so it gets the accent edge and
+   nothing else does. */
+.next { display:flex; gap:10px; align-items:flex-start; background:var(--card);
+  border:1px solid var(--hair2); border-left:3px solid var(--acc);
+  border-radius:var(--r-xs); padding:10px var(--s3); }
+.next .lead { flex:1; min-width:0; }
+.next .hd { font:600 12px/1.3 var(--body); color:var(--ink); }
+.next .hd b { color:var(--acc); font-weight:600; font-variant-numeric:tabular-nums; }
+.next .sub { display:block; margin-top:4px; font:450 10.5px/1.4 var(--body); color:var(--ink3); }
+.next[data-live="broken"] { border-left-color:var(--badc); }
+.next[data-live="broken"] .hd b { color:var(--badc); }
+
+/* ── platform accordion ───────────────────────────────────────────────── */
+.accordion { display:flex; flex-direction:column; gap:var(--s2); }
+.pitem { background:var(--card); border:1px solid var(--hair2); border-radius:var(--r-sm);
+  overflow:hidden; }
+.pitem .plat { width:100%; }
+.plat { display:flex; align-items:center; gap:var(--s2); padding:10px var(--s3);
+  background:none; border:0; cursor:pointer; text-align:left; color:var(--ink); }
+.pitem .plat:hover { background:var(--field); }
+.plat .lead { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.plat .name { font:600 12.5px/1.2 var(--body); letter-spacing:-.015em; color:var(--ink); }
+.plat .who { font:450 10.5px/1.2 var(--body); color:var(--ink3); }
+.plat .state { display:inline-flex; align-items:center; gap:5px; font:550 10.5px/1 var(--body);
+  color:var(--ink3); }
+.plat .dot { background:var(--ink3); }
+.plat[data-state="live"] .state { color:var(--okc); }
+.plat[data-state="live"] .dot { background:var(--okc); }
+.plat[data-state="loading"] .state { color:var(--warnc); }
+.plat[data-state="loading"] .dot { background:var(--warnc); }
+.plat[data-state="dead"] .state { color:var(--badc); }
+.plat[data-state="dead"] .dot { background:var(--badc); }
+.plat[data-state="idle"] .state { color:var(--ink3); }
+.plat[data-state="off"] .state { color:var(--ink3); }
+.plat[data-state="off"] .who { color:var(--ink3); }
+.plat[data-active="true"] { background:color-mix(in srgb,var(--acc) 10%,transparent); }
+.plat[data-active="false"] .name { color:var(--ink2); }
+.plat[data-active="false"]:hover { background:var(--field); }
+.chev { flex:0 0 auto; width:7px; height:7px; border-right:1.5px solid var(--ink3);
+  border-bottom:1.5px solid var(--ink3); transform:rotate(45deg); margin-right:2px;
+  transition:transform .2s cubic-bezier(.32,.72,0,1); }
+.pitem[data-open="true"] .chev { transform:rotate(-135deg); }
+.pitem[data-open="true"] { border-color:var(--hair); }
+.pitem[data-open="true"] .plat { border-bottom:1px solid var(--hair2); }
+@media (prefers-reduced-motion:reduce){ .chev { transition:none; } }
+.pbody { padding:var(--s3); display:flex; flex-direction:column; gap:var(--s3); }
+.pbody:empty { display:none; }
+.pacts { display:flex; gap:var(--s2); }
+.pacts .btn { flex:1; }
+.phint { margin:0; font:450 10.5px/1.45 var(--body); color:var(--ink3); }
+.pform { display:flex; flex-direction:column; gap:var(--s3); }
+
+/* A pass the platform does not have is HIDDEN, not greyed: a budget is a
+   readout, and "5 outreach remaining" on WhatsApp is not a disabled feature,
+   it is a number that will never move. */
+[data-capability].unavailable { display:none; }
+[data-capability].unavailable .cap-note { display:none; }
+
+/* ── presets ──────────────────────────────────────────────────────────── */
+.preset-list { display:flex; flex-direction:column; gap:var(--s2); }
+.preset { background:var(--card); border:1px solid var(--hair2); border-radius:var(--r-sm);
+  padding:10px var(--s3); display:flex; align-items:center; gap:var(--s2); }
+.preset .lead { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.preset .name { font:600 12.5px/1.2 var(--body); letter-spacing:-.015em; color:var(--ink); }
+.preset .who { font:450 10.5px/1.2 var(--body); color:var(--ink3); }
+.preset-acts { display:flex; gap:6px; flex:0 0 auto; }
+.preset-acts .btn { flex:0 0 auto; padding:6px 10px; font-size:11px; }
+/* ONE brand fill per VIEW, and a list of presets is one view. `sidepanel.js`
+   marks each row's Load as primary, which is right about emphasis and wrong
+   about weight: three brand fills stacked down the tab is precisely the
+   "colour every CTA" failure that makes a system read as a theme. Load keeps
+   the accent — in the ink, not the fill — so it still leads its row while the
+   only brand fill in the panel stays on Start. */
+.preset-acts .btn.primary { background:var(--field); color:var(--acc);
+  border-color:color-mix(in srgb,var(--acc) 34%,transparent); box-shadow:none; }
+.preset-acts .btn.primary:hover:not(:disabled) { filter:none;
+  background:color-mix(in srgb,var(--acc) 14%,transparent); }
+
+.fleet { background:var(--card); border:1px solid var(--hair2); border-left:3px solid var(--acc);
+  border-radius:var(--r-sm); padding:10px var(--s3); }
+.fleet[data-bad="true"] { border-left-color:var(--badc); }
+.fleet-head { display:flex; align-items:center; justify-content:space-between; gap:var(--s2); }
+.fleet-head .lab { font:600 12px/1.2 var(--body); color:var(--ink); }
+.fleet-head .state { font:550 10.5px/1 var(--body); color:var(--okc); }
+.fleet-head .state[data-bad="true"] { color:var(--badc); }
+.fleet .sub { display:block; margin-top:5px; font:450 10.5px/1.4 var(--body); color:var(--ink3); }
+
+/* ── activity log ─────────────────────────────────────────────────────── */
+.log { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.log li { display:flex; gap:9px; padding:7px 0; border-bottom:1px solid var(--hair2);
+  font:450 11px/1.4 var(--body); color:var(--ink2); }
+.log li:last-child { border-bottom:0; }
+.log time { flex:0 0 auto; font:500 10px/1.5 var(--mono); color:var(--ink3);
+  font-variant-numeric:tabular-nums; }
+.log li[data-level="info"] span { color:var(--ink2); }
+.log li[data-level="error"] span { color:var(--badc); }
+.empty { padding:var(--s4) 0; text-align:center; font:450 11.5px/1.5 var(--body);
+  color:var(--ink3); border:0; }
+
+#preset-paste { font:500 10.5px/1.5 var(--mono); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOTION
+   ───────────────────────────────────────────────────────────────────────────
+   Everything here is either a compositor property (transform / opacity) or a
+   width the browser was going to lay out anyway. Nothing animates a box the
+   glass sits on: `lg-core` bakes a displacement map per size, so animating a
+   [data-lg] host's geometry would rebuild that map every frame and throw all
+   but the last.
+
+   One curve does almost all of it. `--ease` is Apple's standard out-curve —
+   fast to 80% then a long settle — and `--spring` adds the small overshoot
+   that makes a selection feel picked up rather than redrawn.
+
+   EVERY rule is switched off under prefers-reduced-motion at the bottom of the
+   block, in ONE place, rather than per rule.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ease: cubic-bezier(.32,.72,0,1);
+  --spring: cubic-bezier(.32,1.28,.38,1);
+  --dur-1: .16s;
+  --dur-2: .26s;
+  --dur-3: .42s;
+}
+
+/* ── entrances ──────────────────────────────────────────────────────────── */
+/* A panel does not cut in. It rises a few pixels, which reads as the content
+   arriving rather than the tab having been redrawn under you. */
+@keyframes lift-in {
+  from { opacity:0; transform:translate3d(0,7px,0); }
+  to   { opacity:1; transform:none; }
+}
+/* ⚠ THE CHILDREN, AND NEVER `.panel` ITSELF — `.runbar` is a [data-lg] host
+   living INSIDE the inbox panel. A transform on the panel would make it a
+   backdrop root for 260ms on every tab switch, and the run bar's glass would
+   half-render or vanish for exactly that long: the trap at the top of this
+   file, arriving through an animation instead of a layout rule. Excluding it
+   costs nothing, because an absolutely-positioned bar pinned to the bottom was
+   never going to read as "rising" anyway. */
+.panel.is-active > *:not(.runbar) { animation:lift-in var(--dur-2) var(--ease) both; }
+
+/* The budget tiles carry the one set of numbers that changes on its own, so
+   they get a stagger — three things landing in sequence reads as a readout
+   being filled, where three landing together reads as a repaint. */
+@keyframes tile-in {
+  from { opacity:0; transform:translate3d(0,6px,0) scale(.985); }
+  to   { opacity:1; transform:none; }
+}
+.panel.is-active .budget { animation:tile-in var(--dur-2) var(--ease) both; }
+.panel.is-active .budget:nth-child(1) { animation-delay:.02s; }
+.panel.is-active .budget:nth-child(2) { animation-delay:.06s; }
+.panel.is-active .budget:nth-child(3) { animation-delay:.10s; }
+
+/* A message appears from the side it belongs to. Incoming leans in from the
+   left, ours from the right — the same geometry that decides direction in the
+   adapter, so the animation cannot disagree with the classification. */
+@keyframes msg-in-left {
+  from { opacity:0; transform:translate3d(-9px,3px,0) scale(.97); }
+  to   { opacity:1; transform:none; }
+}
+@keyframes msg-in-right {
+  from { opacity:0; transform:translate3d(9px,3px,0) scale(.97); }
+  to   { opacity:1; transform:none; }
+}
+.transcript .msg { animation:msg-in-left var(--dur-2) var(--ease) both; }
+.transcript .msg.out { animation-name:msg-in-right; }
+/* Only the tail is staggered. A forty-message history that dealt itself out
+   one bubble at a time would take four seconds to become readable. */
+.transcript .msg:nth-last-child(1) { animation-delay:.10s; }
+.transcript .msg:nth-last-child(2) { animation-delay:.07s; }
+.transcript .msg:nth-last-child(3) { animation-delay:.04s; }
+.transcript .msg:nth-last-child(4) { animation-delay:.02s; }
+
+/* A generated reply is the one thing here the user waited on, so it gets the
+   spring rather than the plain ease. */
+@keyframes reply-in {
+  from { opacity:0; transform:translate3d(0,8px,0) scale(.96); }
+  to   { opacity:1; transform:none; }
+}
+.bubbles li { animation:reply-in var(--dur-3) var(--spring) both; }
+.bubbles li:nth-child(2) { animation-delay:.07s; }
+.bubbles li:nth-child(3) { animation-delay:.14s; }
+.bubbles li:nth-child(n+4) { animation-delay:.2s; }
+
+/* Log rows enter from the top because that is where a new one is inserted. */
+@keyframes row-in {
+  from { opacity:0; transform:translate3d(0,-4px,0); }
+  to   { opacity:1; transform:none; }
+}
+.log li:first-child { animation:row-in var(--dur-2) var(--ease) both; }
+
+/* ── the live state ─────────────────────────────────────────────────────── */
+/* A run pill that says "Running" and sits perfectly still is the single most
+   common way a stalled sweep reads as a healthy one. The dot breathes only
+   while the run bar is actually running. */
+@keyframes breathe {
+  0%,100% { opacity:1;   transform:scale(1); }
+  50%     { opacity:.55; transform:scale(.82); }
+}
+.pill[data-state="running"] .dot,
+.pill[data-state="sweeping"] .dot { animation:breathe 1.9s var(--ease) infinite; }
+
+/* The budget meter fills rather than snapping, so a cap being spent is
+   something you can see happen. Width is the honest property here — the bar is
+   a bar, not a transform of one. */
+.meter, .budget .meter > * { transition:width var(--dur-3) var(--ease); }
+
+/* ── controls ───────────────────────────────────────────────────────────── */
+/* Press feedback. `active` rather than `:hover` does the work: this panel is
+   driven by deliberate clicks, and a hover-only affordance says nothing on a
+   trackpad tap. */
+.btn { transition:transform var(--dur-1) var(--ease), background var(--dur-1), border-color var(--dur-1); }
+.btn:active:not(:disabled) { transform:scale(.975); }
+.tab { transition:color var(--dur-2) var(--ease); }
+.pill { transition:background var(--dur-2) var(--ease), color var(--dur-2) var(--ease); }
+
+/* The accordion chevron already turned; the body it opens did not. */
+@keyframes body-in {
+  from { opacity:0; transform:translate3d(0,-5px,0); }
+  to   { opacity:1; transform:none; }
+}
+.pbody { animation:body-in var(--dur-2) var(--ease) both; }
+
+/* ── the one switch ─────────────────────────────────────────────────────── */
+/* Reduced motion means NO motion, not less of it — including the infinite
+   breathe, which is the one that matters to somebody who asked for stillness.
+   The end states above are all `to { transform:none }`, so cancelling the
+   animation leaves every element exactly where it belongs. */
+@media (prefers-reduced-motion:reduce) {
+  .panel.is-active > *:not(.runbar),
+  .panel.is-active .budget,
+  .transcript .msg,
+  .bubbles li,
+  .log li:first-child,
+  .pbody,
+  .pill[data-state="running"] .dot,
+  .pill[data-state="sweeping"] .dot {
+    animation:none;
+  }
+  .btn, .tab, .pill, .meter, .budget .meter > * { transition:none; }
+  .btn:active:not(:disabled) { transform:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE INFO AFFORDANCE
+   ───────────────────────────────────────────────────────────────────────────
+   A label that needs a sentence to be understood gets an ⓘ instead of the
+   sentence. The text lives in `data-tip` and is painted on hover and on
+   FOCUS — focus is not optional here, it is the only way the copy is reachable
+   without a mouse.
+
+   WHAT DOES NOT GO BEHIND AN ICON: anything that reaches another person.
+   Outreach, public comments and a preset carrying your token keep their line
+   on the surface, because a warning you have to hover to find is not a
+   warning. Everything else — mechanism, definitions, "what does this field
+   mean" — is one hover away.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.info {
+  display:inline-grid; place-items:center; position:relative;
+  width:14px; height:14px; margin-left:5px; vertical-align:-2px;
+  border:0; padding:0; border-radius:50%; cursor:help;
+  background:color-mix(in srgb,var(--ink) 14%,transparent);
+  color:var(--ink2); font:600 9.5px/1 var(--body);
+  transition:background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.info::before { content:"i"; }
+/* :focus, NOT :focus-visible. A pointer or a script focusing the icon does
+   NOT satisfy :focus-visible — it is a keyboard heuristic — so a tap would
+   have opened nothing at all and only a mouse hover would have worked.
+   Measured: getComputedStyle(icon, "::after").visibility stayed "hidden"
+   after .focus(). :focus covers keyboard, pointer and tap alike. */
+.info:hover, .info:focus { background:var(--acc); color:var(--ink-inv); outline:none; }
+
+/* The bubble. `width:max-content` with a cap so a short tip is short, and
+   `overflow-x:hidden` on the panel means it must never reach past the right
+   edge — 230px clears it at the narrowest panel Chrome allows. */
+/* THE BUBBLE IS A SINGLE FIXED ELEMENT, not a pseudo on the icon.
+   A ::after lives inside the scrolling panel, and the panel is
+   `overflow-x:hidden` — so a tip on an icon near the right edge was clipped,
+   and one near the bottom was cut off by the scroll box. Nothing in CSS can
+   flip a pseudo-element to the other side when it would not fit.
+   `position:fixed` escapes the clip entirely, and #tip is measured and
+   clamped to the viewport by `placeTip` in sidepanel.js.
+   ⚠ fixed is only truly fixed with no transformed ancestor — #tip is a direct
+   child of <body> for exactly that reason. */
+#tip {
+  position:fixed; z-index:9; left:0; top:0;
+  max-width:min(260px, 100vw - 16px);
+  padding:7px 9px; border-radius:var(--r-xs);
+  background:#1b1826; border:1px solid var(--hair);
+  box-shadow:0 10px 26px -8px rgba(0,0,0,.8);
+  font:450 10.5px/1.45 var(--body); letter-spacing:0; color:var(--ink2);
+  text-align:left; white-space:normal; pointer-events:none;
+  opacity:0; transform:translateY(-3px);
+  transition:opacity var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+#tip[data-show="1"] { opacity:1; transform:none; }
+@media (prefers-reduced-motion:reduce){ #tip { transition:none; } }
+@media (prefers-reduced-motion:reduce){ .info, .info::after { transition:none; } }

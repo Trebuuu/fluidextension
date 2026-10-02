@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FluidExtension</title>
+    <!-- The material FIRST, the panel's own styles after, so the cascade order
+         matches the design system's: lg.css declares the layers, sidepanel.css
+         decides what wears them. -->
+    <link rel="stylesheet" href="../vendor/lg.css" />
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <!-- GLASS IS CHROME. The bar, the tab rail and the run bar float over the
+         column and are glass; everything carrying a number or a message is an
+         opaque card. `data-lg-live` moves the specular with the pointer.
+         Refraction is Chromium-only, which is the only browser this extension
+         runs in — elsewhere lg.css degrades to frost + rim + highlight. -->
+    <header class="bar" data-lg data-lg-bezel="16" data-lg-blur="11"
+            data-lg-radius="18" data-lg-live data-lg-interactive>
+      <!-- Mark and name are one lockup, so the bar's space-between keeps them
+           together on the left and the pills on the right. The mark comes
+           straight from FluidTalk's icon.svg — this panel is a FluidTalk client
+           and should read as one. -->
+      <div class="lockup">
+        <img class="mark" src="../../icons/icon.svg" alt="" width="18" height="18" />
+        <h1 class="wordmark"><b>Fluid</b><span>Extension</span></h1>
+      </div>
+      <!-- Which platform is being WORKED — not which tab is in front. It
+           follows the last platform tab you focused and stays there while you
+           look at anything else, including this panel. -->
+      <span class="pill" id="platform-pill" data-state="none">—</span>
+      <!-- Says what the panel is DOING, which is the one thing worth a colour. -->
+      <span class="pill" id="run-pill" data-state="idle"><i class="dot"></i>Idle</span>
+    </header>
+
+    <nav class="tabs" role="tablist" data-lg data-lg-bezel="13" data-lg-blur="9"
+         data-lg-radius="16" data-lg-live data-lg-interactive>
+      <!-- THE SELECTION IS ONE ELEMENT THAT MOVES, not a background that jumps
+           between four. A repainted background cannot be animated between two
+           different boxes; a single indicator can travel, and travelling is the
+           whole reason the control reads as physical. Positioned from JS
+           (`moveTabDot`) because the tabs are a fr-grid and their box is only
+           known at layout time. It sits BEHIND the labels (z-index:0 vs 1). -->
+      <span class="tabdot" aria-hidden="true"></span>
+      <button role="tab" class="tab is-active" data-tab="inbox" aria-selected="true">Inbox</button>
+      <button role="tab" class="tab" data-tab="settings" aria-selected="false">Settings</button>
+      <button role="tab" class="tab" data-tab="presets" aria-selected="false">Presets</button>
+      <button role="tab" class="tab" data-tab="activity" aria-selected="false">Activity</button>
+    </nav>
+
+    <!-- ── Inbox ─────────────────────────────────────────────────────────── -->
+    <section class="panel is-active" data-panel="inbox">
+      <!-- A release exists and this install does not have it.
+           HIDDEN UNLESS TRUE, and dismissible per version: an update notice
+           that survives being dismissed is an advert, and the next real one
+           gets ignored with it. Chrome cannot tell us this — requestUpdateCheck
+           is a no-op on an unpacked install — so it comes from our own feed;
+           see src/lib/update.js. -->
+      <div class="update" id="update-banner" hidden>
+        <div class="update-said">
+          <strong id="update-head">Update available</strong>
+          <span id="update-sub"></span>
+        </div>
+        <div class="update-acts">
+          <a class="btn primary sm" id="update-get" target="_blank" rel="noopener noreferrer">Download</a>
+          <button class="btn sm" id="update-reload" title="Once you have unzipped the new folder over the old one, this re-reads it from disk.">Reload</button>
+          <button class="btn ghost sm" id="update-hide" aria-label="Dismiss until the next release">Later</button>
+        </div>
+      </div>
+
+      <!-- The platform list lives in SETTINGS now. Choosing a platform is a
+           setup act, not something to do mid-conversation, and the header pill
+           already answers "which one am I on" from here. -->
+
+      <!-- Budgets first: they decide what happens next, so they answer
+           "why did it skip everyone" before the conversation is even read. -->
+      <!-- IN RUN ORDER, the same order the worker performs the passes in and the
+           same order the Start button describes them. One list read two ways was
+           two lists to keep in step.
+
+           HIDDEN rather than greyed where the pass will not run — see
+           `BUDGETS` in sidepanel.js for which two things hide one. A budget is a
+           readout, not a control: "5 outreach remaining" for a pass that is
+           switched off is a number that will never move and cannot mean
+           anything, and a greyed number still reads as a number. -->
+      <div class="budgets">
+        <div class="budget" id="q-new">
+          <div class="n" id="q-new-n">—</div>
+          <div class="k">Replies</div>
+          <div class="meter"><i id="q-new-bar" style="width:0%"></i></div>
+          <div class="sub" id="q-new-sub"></div>
+        </div>
+        <div class="budget" id="q-req">
+          <div class="n" id="q-req-n">—</div>
+          <div class="k">Requests</div>
+          <div class="meter"><i id="q-req-bar" style="width:0%"></i></div>
+          <div class="sub" id="q-req-sub"></div>
+        </div>
+        <div class="budget" id="q-rep">
+          <div class="n" id="q-rep-n">—</div>
+          <div class="k">Comment replies</div>
+          <div class="meter"><i id="q-rep-bar" style="width:0%"></i></div>
+          <div class="sub" id="q-rep-sub"></div>
+        </div>
+        <div class="budget" id="q-com">
+          <div class="n" id="q-com-n">—</div>
+          <div class="k">Comments</div>
+          <div class="meter"><i id="q-com-bar" style="width:0%"></i></div>
+          <div class="sub" id="q-com-sub"></div>
+        </div>
+        <div class="budget" id="q-out">
+          <div class="n" id="q-out-n">—</div>
+          <div class="k">Cold DMs</div>
+          <div class="meter"><i id="q-out-bar" style="width:0%"></i></div>
+          <div class="sub" id="q-out-sub"></div>
+        </div>
+      </div>
+
+      <div id="status" class="status" role="status"></div>
+
+      <div class="card" id="thread-card" hidden>
+        <div class="card-head">
+          <span class="who" id="thread-handle"></span>
+          <button class="link" id="refresh">Refresh</button>
+        </div>
+        <ol class="transcript" id="transcript"></ol>
+      </div>
+
+      <div class="card" id="reply-card" hidden>
+        <div class="card-head"><span class="who">Suggested reply</span></div>
+        <ol class="bubbles" id="bubbles"></ol>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="generate">Generate</button>
+        <button class="btn" id="insert" disabled>Insert</button>
+        <button class="btn" id="send" disabled>Send</button>
+      </div>
+      <p class="hint" id="action-hint"></p>
+
+      <!-- Lives here, not in Settings: it changes what these three buttons
+           mean, and it is the difference between drafting and messaging. -->
+      <label class="check">
+        <span>
+          <span class="lab">Reply automatically</span>
+          <span class="sub" id="autoSend-sub"></span>
+        </span>
+        <input id="autoSend" type="checkbox" />
+      </label>
+
+      <!-- THE RUN BAR. Wrapped, not moved: `sidepanel.js` reaches both of
+           these by id, so giving them a floating container changes where they
+           sit and nothing about what drives them. It is chrome — the thing
+           that starts and stops the work — so it is glass, and it floats for
+           the same reason the top bar does: at 380px a docked bar would take a
+           slice out of the only dimension the panel has. -->
+      <div class="runbar" data-lg data-lg-bezel="18" data-lg-blur="13"
+           data-lg-radius="20" data-lg-live data-lg-interactive>
+        <!-- Filled in from settings on load: what Start does depends on them. -->
+        <p class="hint" id="sweep-status"></p>
+        <div class="actions">
+          <button class="btn primary" id="sweep-toggle">Start</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Settings ──────────────────────────────────────────────────────── -->
+    <section class="panel" data-panel="settings">
+      <!-- THE GLOBAL SETTING COMES FIRST, ABOVE THE PLATFORMS, because that is
+           what it is: everything inside a platform row below belongs to that
+           account alone, and the token belongs to all of them. Position is the
+           cheapest way to say so. -->
+      <!-- A DIV WRAPPING AN EXPLICIT <label>, not a <label> wrapping everything.
+           A label forwards any click inside it to its control, so the "Get a
+           token" link would also focus the password field on the way out — and
+           the ⓘ beside it would have needed the same guard the toggles do.
+           Pairing `for` with the input's id keeps the label association exact
+           without owning the clicks. -->
+      <div class="field">
+        <span class="with-action">
+          <label for="connectorToken">Character token</label>
+          <button type="button" class="info" aria-label="From the FluidTalk dashboard. The token IS the character." data-tip="From the FluidTalk dashboard. The token IS the character."></button>
+          <a class="link out" href="https://talk.fluidvip.com" target="_blank" rel="noopener noreferrer">Get a token</a>
+        </span>
+        <input id="connectorToken" type="password" placeholder="ftc_…" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <hr class="rule" />
+
+      <!-- One row per platform, built in JS. The form below is MOVED into
+           whichever row is open, so there is exactly one copy of it and it can
+           only ever be showing one platform's values. -->
+      <div class="accordion" id="platform-settings"></div>
+
+      <!-- WHERE THE FORM LIVES WHILE NO MODULE IS OPEN.
+           It has to live SOMEWHERE outside the modules: they are rebuilt with
+           replaceChildren, which discards whatever is inside them, so a form
+           left parked in a module it is no longer being re-parented out of is
+           destroyed — and then opening a module finds no form to move. -->
+      <div id="form-home" hidden>
+      <!-- ── one platform's settings ──────────────────────────────────────
+           Re-parented into the open module. Kept as ONE form rather than three
+           copies: the ids are what every binding and every paint is written
+           against, and three of everything would mean three chances for a
+           control to be wired to the wrong account. -->
+      <div class="pform" id="platform-form" hidden>
+      <div class="field">
+        <span>Signed in as</span>
+        <!-- The handle is its own node so painting it cannot wipe the badge. -->
+        <p class="detected"><b id="ownUsername">—</b><span class="pill">detected</span></p>
+      </div>
+
+      <!-- ── WHEN THIS ACCOUNT IS AWAKE ─────────────────────────────────────
+           First in the form, above every cap and every pass, because it
+           governs all of them: a rate per hour only means anything during the
+           hours the account acts at all.
+
+           The DAYS are seven circles and nothing else — the week has to read
+           at a glance, and at 380px a permanent seven-row grid would eat the
+           panel. A day that is on gets a row below; a day that is off has
+           nothing to scroll past. -->
+      <label class="check" for="scheduleEnabled">
+        <span>
+          <span class="lab">Run on a schedule</span>
+          <span class="sub" id="scheduleEnabled-sub"></span>
+        </span>
+        <input id="scheduleEnabled" type="checkbox" />
+      </label>
+
+      <div class="card sched" id="schedule-card" hidden>
+        <div class="week" id="schedule-week" role="group" aria-label="Days this account runs"></div>
+        <div class="windows" id="schedule-windows"></div>
+        <hr class="rule" />
+        <div class="jrow">
+          <label for="scheduleJitterMin">Start within <button type="button" class="info" aria-label="Derived from the account, so a fleet sharing one preset does not all wake together." data-tip="Derived from the account, so a fleet sharing one preset does not all wake together."></button></label>
+          <input id="scheduleJitterMin" type="number" min="0" max="60" step="1" />
+          <span class="unit">min of the window</span>
+        </div>
+        <!-- The readout comes from the WORKER, not from a calendar in here:
+             "opens Monday 09:04" has to be the sentence the tick is acting on. -->
+        <div class="next" id="schedule-next" data-live="false">
+          <span class="lead">
+            <span class="hd" id="schedule-next-hd">—</span>
+            <span class="sub" id="schedule-next-sub"></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="field row">
+        <label class="grow">
+          <span>New / hour <button type="button" class="info" aria-label="Counts only threads we have never replied in. Answering someone already talking to us is never throttled." data-tip="Counts only threads we have never replied in. Answering someone already talking to us is never throttled."></button></span>
+          <input id="newThreadsPerHour" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>New / day</span>
+          <input id="newThreadsPerDay" type="number" min="0" step="1" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Ignore threads older than <button type="button" class="info" aria-label="Days. 0 means no limit." data-tip="Days. 0 means no limit."></button></span>
+        <input id="maxThreadAgeDays" type="number" min="0" step="1" />
+      </label>
+
+      <div class="field row">
+        <label class="grow">
+          <span>Min delay (s)</span>
+          <input id="minReplyDelayMs" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>Max delay (s)</span>
+          <input id="maxReplyDelayMs" type="number" min="0" step="1" />
+        </label>
+      </div>
+
+      <hr class="rule" />
+
+<div data-capability="requests">
+      <label class="check">
+        <span>
+          <span class="lab">Accept message requests <button type="button" class="info" aria-label="Moves a pending request into the inbox so it can be answered." data-tip="Moves a pending request into the inbox so it can be answered."></button></span>
+          <span class="sub" id="requests-sub"></span>
+        </span>
+        <input id="acceptRequests" type="checkbox" />
+      </label>
+      <div class="field row">
+        <label class="grow">
+          <span>Accept / hour</span>
+          <input id="requestsPerHour" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>Accept / day</span>
+          <input id="requestsPerDay" type="number" min="0" step="1" />
+        </label>
+      </div>
+
+      </div>
+
+      <hr class="rule" />
+
+      <label class="check">
+        <span>
+          <span class="lab">Answer media we can't open <button type="button" class="info" aria-label="A view-once photo never reaches the browser. On, the character is told “sent a disappearing photo”; off, the thread is skipped." data-tip="A view-once photo never reaches the browser. On, the character is told “sent a disappearing photo”; off, the thread is skipped."></button></span>
+        </span>
+        <input id="describeUnreadable" type="checkbox" />
+      </label>
+
+      <hr class="rule" />
+
+<div data-capability="followups">
+      <label class="check">
+        <span>
+          <!-- The Risky badge and the tip text are both filled in by
+               `paintCapabilities` from the platform's `riskyCapabilities`, and
+               removed again on a platform where this is ordinary. A risk that is
+               true of one platform must not be worded as if it were true of all
+               of them — Instagram has tolerated follow-ups for months. -->
+          <span class="lab">Follow up when they go quiet<span id="followups-risk" class="risk" hidden>Risky</span>
+            <button type="button" class="info" id="followups-info"
+              aria-label="A nudge to a lead who went quiet. Nobody asked for it, so treat it as the most exposed thing the extension does."
+              data-tip="A nudge to a lead who went quiet. Nobody asked for it, so treat it as the most exposed thing the extension does."></button></span>
+        </span>
+        <input id="followupsEnabled" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>Follow-up ladder — hours to wait before each nudge</span>
+        <input id="followupStagesHours" type="text" inputmode="numeric" placeholder="12, 24, 48" autocomplete="off" spellcheck="false" />
+        <small id="followup-sub"></small>
+      </label>
+
+      </div>
+
+      <hr class="rule" />
+
+<div data-capability="comments">
+      <label class="check">
+        <span>
+          <span class="lab">Comment on posts</span>
+          <span class="sub">
+            Public. Also needs Comments on in FluidTalk.
+          </span>
+        </span>
+        <input id="commentsEnabled" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>Comment on</span>
+        <select id="commentSources">
+          <option value="feed">Posts in my home feed</option>
+          <option value="followers">Posts by my followers</option>
+          <option value="both">Both</option>
+        </select>
+      </label>
+      <div class="field row">
+        <label class="grow">
+          <span>Comments / hour</span>
+          <input id="commentsPerHour" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>Comments / day</span>
+          <input id="commentsPerDay" type="number" min="0" step="1" />
+        </label>
+      </div>
+      <label class="check">
+        <span>
+          <span class="lab">Skip ads <button type="button" class="info" aria-label="Sponsored posts and paid partnerships." data-tip="Sponsored posts and paid partnerships."></button></span>
+        </span>
+        <input id="skipSponsored" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>Posts to scan per run</span>
+        <input id="feedScanLimit" type="number" min="1" step="1" />
+      </label>
+
+      <div class="actions">
+        <button class="btn" id="comment-check">Are comments on?</button>
+        <button class="btn" id="comment-preview">Draft for this post</button>
+      </div>
+      <div class="actions">
+        <button class="btn" id="feed-preview">Preview feed picks</button>
+      </div>
+
+</div>
+
+      <div data-capability="commentReplies">
+      <label class="check">
+        <span>
+          <span class="lab">Answer replies to my comments <button type="button" class="info" aria-label="FluidTalk decides whether to answer, nudge them to the DMs, or bow out." data-tip="FluidTalk decides whether to answer, nudge them to the DMs, or bow out."></button></span>
+        </span>
+        <input id="commentRepliesEnabled" type="checkbox" />
+      </label>
+      <div class="field row">
+        <label class="grow">
+          <span>Replies / hour</span>
+          <input id="commentRepliesPerHour" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>Replies / day</span>
+          <input id="commentRepliesPerDay" type="number" min="0" step="1" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" id="replies-read">Replies to my comment here</button>
+        <button class="btn" id="replies-dry">Dry-run answering</button>
+      </div>
+
+</div>
+
+            <pre class="probe" id="comment-out" hidden></pre>
+
+      <hr class="rule" />
+
+<div data-capability="outreach">
+      <label class="check">
+        <span>
+          <span class="lab">Cold DM my followers</span>
+          <span class="sub">The only thing here that messages people who never wrote to us.</span>
+        </span>
+        <input id="outreachEnabled" type="checkbox" />
+      </label>
+      <div class="field row">
+        <label class="grow">
+          <span>Outreach / hour</span>
+          <input id="outreachPerHour" type="number" min="0" step="1" />
+        </label>
+        <label class="grow">
+          <span>Outreach / day</span>
+          <input id="outreachPerDay" type="number" min="0" step="1" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" id="outreach-preview">Preview targets</button>
+      </div>
+      <pre class="probe" id="outreach-list" hidden></pre>
+
+      </div>
+
+      <hr class="rule" />
+
+      <label class="check">
+        <span>
+          <span class="lab">Pause between threads <button type="button" class="info" aria-label="Waits between conversations instead of moving straight on." data-tip="Waits between conversations instead of moving straight on."></button></span>
+        </span>
+        <input id="pauseBetweenThreads" type="checkbox" />
+      </label>
+      <label class="field">
+        <span>Pause length (s)</span>
+        <input id="betweenThreadsMs" type="number" min="0" step="1" />
+      </label>
+      </div><!-- /platform-form -->
+      </div><!-- /form-home -->
+
+      <hr class="rule" />
+
+      <!-- Install-wide, like the token: the connection being tested is
+           FluidTalk's, which is the same one for every platform. -->
+      <div class="actions">
+        <button class="btn" id="check-token">Test connection</button>
+        <button class="btn" id="diagnose">Diagnose page</button>
+      </div>
+      <pre class="probe" id="probe" hidden></pre>
+
+    </section>
+
+    <!-- ── Presets ───────────────────────────────────────────────────────── -->
+    <section class="panel" data-panel="presets">
+      <!-- WHAT A PRESET IS, in one line, because it carries a token and it
+           rebinds the extension — both things somebody should know before
+           pressing Load. -->
+
+      <!-- The fleet file, when there is one. Hidden on an ordinary install:
+           most people have one browser and this would be noise. -->
+      <div class="fleet" id="fleet-box" hidden>
+        <div class="fleet-head"><span class="lab">Fleet config</span><span class="state" id="fleet-state"></span></div>
+        <p class="sub" id="fleet-sub"></p>
+      </div>
+
+      <label class="field">
+        <span>Save this setup as</span>
+        <div class="field row">
+          <input id="preset-name" type="text" placeholder="e.g. Nadia · Telegram" autocomplete="off" spellcheck="false" />
+          <button class="btn primary" id="preset-save">Save</button>
+        </div>
+      </label>
+      <label class="check">
+        <span>
+          <span class="lab">Include the character token</span>
+          <span class="sub">
+            Anyone who gets the file can send messages as this character.
+          </span>
+        </span>
+        <input id="preset-with-token" type="checkbox" checked />
+      </label>
+
+      <hr class="rule" />
+
+      <div class="preset-list" id="preset-list"></div>
+
+      <hr class="rule" />
+
+      <div class="field">
+        <span>Import a preset</span>
+        <textarea id="preset-paste" rows="4" placeholder='Paste a preset here, then press Check.' spellcheck="false"></textarea>
+        <div class="actions">
+          <button class="btn" id="preset-check">Check</button>
+          <button class="btn" id="preset-import" disabled>Import</button>
+          <button class="btn" id="preset-apply-pasted" disabled>Apply now</button>
+        </div>
+        <pre class="probe" id="preset-out" hidden></pre>
+      </div>
+    </section>
+
+    <!-- ── Activity ──────────────────────────────────────────────────────── -->
+    <section class="panel" data-panel="activity">
+      <div class="actions">
+        <button class="btn" id="clear-log">Clear</button>
+      </div>
+      <div class="card"><ol class="log" id="log"></ol></div>
+    </section>
+
+
+    <!-- ── where to find us ─────────────────────────────────────────────────
+         ONE COPY, CLONED INTO EVERY PANEL by `mountCommunity` in sidepanel.js.
+         Four literal copies would drift the moment a link changed, and a single
+         fixed bar is not an option: the Inbox already floats the run bar at the
+         bottom, and two floating bars would sit on top of each other.
+
+         ANCHORS, NOT BUTTONS. A side panel cannot navigate itself away — it IS
+         the extension page — so each opens a normal tab. `rel="noopener"`
+         because a page opened from here would otherwise hold a handle on the
+         panel through window.opener.
+
+         The marks are the official Discord and Telegram glyphs from
+         simple-icons (CC0), inlined: the panel has no network access for
+         images and an external icon would be a CSP violation, not a slow load.
+         `fill="currentColor"` is on the rule, so a logo inherits the button-s
+         text colour and cannot fight the theme. -->
+    <template id="community-tpl">
+      <div class="field community">
+        <span>Community</span>
+        <div class="actions">
+          <a class="btn" href="https://discord.gg/PXUeVtPV6" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>Discord</a>
+          <a class="btn" href="https://t.me/+7TmYLy0KKqZiZDE0" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Group chat</a>
+          <a class="btn" href="https://t.me/fluidvip" target="_blank" rel="noopener noreferrer"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Updates</a>
+        </div>
+      </div>
+    </template>
+
+    <!-- Classic script, not a module: lg-core mounts every [data-lg] on load
+         and must have done so before anything repaints. It is MV3-safe — no
+         eval, no new Function, no fetch; it builds its filters with
+         createElementNS and its displacement maps with canvas.toDataURL. -->
+    <script src="../vendor/lg-core.js"></script>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>
